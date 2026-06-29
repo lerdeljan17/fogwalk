@@ -14,6 +14,9 @@ build/
 *.ap_
 *.dex
 *.class
+*.jks
+*.keystore
+keystore.properties
 bin/
 gen/
 out/

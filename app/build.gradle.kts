@@ -1,8 +1,33 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
 }
+
+// Resolve config from environment variables first, falling back to Gradle
+// properties. This keeps secrets out of the repo: CI exports env vars decoded
+// from GitHub Actions secrets, while local/contributor builds can omit them.
+fun fogwalkConfig(name: String): String? =
+    System.getenv(name) ?: (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+
+val fogwalkKeystore = fogwalkConfig("FOGWALK_KEYSTORE")
+val fogwalkKeystorePassword = fogwalkConfig("FOGWALK_KEYSTORE_PASSWORD")
+val fogwalkKeyAlias = fogwalkConfig("FOGWALK_KEY_ALIAS")
+val fogwalkKeyPassword = fogwalkConfig("FOGWALK_KEY_PASSWORD")
+
+// Only use the stable release signing config when all inputs are present and the
+// keystore file actually exists; otherwise fall back to debug signing so plain
+// `./gradlew assembleRelease` keeps working without secrets.
+val hasReleaseSigning = !fogwalkKeystore.isNullOrBlank() &&
+    File(fogwalkKeystore).exists() &&
+    !fogwalkKeystorePassword.isNullOrBlank() &&
+    !fogwalkKeyAlias.isNullOrBlank() &&
+    !fogwalkKeyPassword.isNullOrBlank()
+
+val fogwalkVersionCode = fogwalkConfig("FOGWALK_VERSION_CODE")?.toIntOrNull() ?: 1
+val fogwalkVersionName = fogwalkConfig("FOGWALK_VERSION_NAME") ?: "1.0"
 
 android {
     namespace = "com.fogwalk"
@@ -12,19 +37,34 @@ android {
         applicationId = "com.fogwalk"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = fogwalkVersionCode
+        versionName = fogwalkVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = File(fogwalkKeystore!!)
+                storePassword = fogwalkKeystorePassword
+                keyAlias = fogwalkKeyAlias
+                keyPassword = fogwalkKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Sign release builds with the debug key so CI can produce an
-            // installable APK without any configured secrets. Swap in a real
-            // keystore via signingConfigs + secrets when publishing for real.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use the stable release keystore when configured (CI with secrets),
+            // otherwise fall back to the debug key so contributors can build
+            // installable APKs locally without any secrets.
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

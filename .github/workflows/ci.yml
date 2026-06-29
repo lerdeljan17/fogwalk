@@ -36,7 +36,27 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Decode release keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/fogwalk-release.jks"
+            echo "keystore_path=$RUNNER_TEMP/fogwalk-release.jks" >> "$GITHUB_OUTPUT"
+            echo "Release keystore decoded."
+          else
+            echo "No KEYSTORE_BASE64 secret set; release will be debug-signed."
+          fi
+
       - name: Build release APK
+        env:
+          FOGWALK_KEYSTORE: ${{ steps.keystore.outputs.keystore_path }}
+          FOGWALK_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          FOGWALK_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          FOGWALK_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          FOGWALK_VERSION_CODE: ${{ github.run_number }}
+          FOGWALK_VERSION_NAME: 1.0.${{ github.run_number }}
         run: ./gradlew assembleRelease
 
       - name: Rename APK

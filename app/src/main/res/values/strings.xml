@@ -13,5 +13,10 @@
     <string name="permission_rationale">FogWalk needs location access to reveal the map where you walk. Grant background location to keep tracking with the screen off.</string>
     <string name="permission_denied">Location permission is required to clear the fog.</string>
 
+    <string name="auto_follow_title">Automatic following</string>
+    <string name="auto_follow_summary">Keep tracking your path in the background and resume after reboot.</string>
+    <string name="background_location_needed">For always-on tracking, choose \"Allow all the time\" for location.</string>
+    <string name="background_location_denied">Background location denied. Tracking will only run while the app is open.</string>
+
     <string name="stat_revealed">Revealed: %1$d spots</string>
 </resources>

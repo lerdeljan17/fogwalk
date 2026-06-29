@@ -16,6 +16,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.fogwalk.data.AppDatabase
+import com.fogwalk.data.Settings
 import com.fogwalk.data.VisitedRepository
 import com.fogwalk.databinding.ActivityMainBinding
 import com.fogwalk.map.FogOverlay
@@ -34,8 +35,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fogOverlay: FogOverlay
     private lateinit var locationOverlay: MyLocationNewOverlay
     private lateinit var repository: VisitedRepository
+    private lateinit var settings: Settings
 
     private var isTracking = false
+
+    /** True when the in-flight permission request is for always-on mode. */
+    private var pendingAutoFollow = false
+
+    /** Guards programmatic updates of the switch so the listener doesn't fire. */
+    private var suppressSwitchListener = false
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -44,10 +52,29 @@ class MainActivity : AppCompatActivity() {
             results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
             enableMyLocation()
-            beginTracking()
+            if (pendingAutoFollow) {
+                requestBackgroundLocationThenTrack()
+            } else {
+                beginTracking()
+            }
         } else {
             Toast.makeText(this, R.string.permission_denied, Toast.LENGTH_LONG).show()
+            if (pendingAutoFollow) {
+                pendingAutoFollow = false
+                setAutoFollowEnabled(false)
+            }
         }
+    }
+
+    private val backgroundPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(this, R.string.background_location_denied, Toast.LENGTH_LONG).show()
+        }
+        // Either way, start tracking — falling back to foreground-only when denied.
+        beginTracking()
+        pendingAutoFollow = false
     }
 
     private val pointAddedReceiver = object : BroadcastReceiver() {
@@ -66,12 +93,29 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         repository = VisitedRepository(AppDatabase.get(this).visitedPointDao())
+        settings = Settings(this)
 
         setupMap()
         observeVisitedPoints()
 
         binding.trackButton.setOnClickListener { toggleTracking() }
         binding.recenterButton.setOnClickListener { recenter() }
+        binding.autoFollowSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (suppressSwitchListener) return@setOnCheckedChangeListener
+            onAutoFollowToggled(isChecked)
+        }
+
+        restoreUiState()
+    }
+
+    /** Reflect persisted preference and the service's real running state. */
+    private fun restoreUiState() {
+        suppressSwitchListener = true
+        binding.autoFollowSwitch.isChecked = settings.autoFollowEnabled
+        suppressSwitchListener = false
+
+        isTracking = settings.trackingActive
+        updateTrackButton()
     }
 
     private fun setupMap() {
@@ -118,6 +162,7 @@ class MainActivity : AppCompatActivity() {
         if (isTracking) {
             stopTracking()
         } else {
+            pendingAutoFollow = false
             if (hasLocationPermission()) {
                 beginTracking()
             } else {
@@ -126,18 +171,64 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun onAutoFollowToggled(enabled: Boolean) {
+        settings.autoFollowEnabled = enabled
+        if (enabled) {
+            pendingAutoFollow = true
+            if (hasLocationPermission()) {
+                requestBackgroundLocationThenTrack()
+            } else {
+                requestPermissions()
+            }
+        } else {
+            pendingAutoFollow = false
+            stopTracking()
+        }
+    }
+
+    /** Persist + reflect the auto-follow preference without firing the listener. */
+    private fun setAutoFollowEnabled(enabled: Boolean) {
+        settings.autoFollowEnabled = enabled
+        suppressSwitchListener = true
+        binding.autoFollowSwitch.isChecked = enabled
+        suppressSwitchListener = false
+    }
+
+    /**
+     * On Android 10+ background location must be requested as a separate
+     * follow-up after foreground location is already granted. If granted (or on
+     * older versions) we start tracking immediately.
+     */
+    private fun requestBackgroundLocationThenTrack() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasBackgroundLocationPermission()) {
+            Toast.makeText(this, R.string.background_location_needed, Toast.LENGTH_LONG).show()
+            backgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else {
+            beginTracking()
+            pendingAutoFollow = false
+        }
+    }
+
     private fun beginTracking() {
         LocationTrackingService.start(this)
         isTracking = true
-        binding.trackButton.setText(R.string.action_stop)
-        binding.trackButton.setIconResource(android.R.drawable.ic_media_pause)
+        updateTrackButton()
     }
 
     private fun stopTracking() {
         LocationTrackingService.stop(this)
         isTracking = false
-        binding.trackButton.setText(R.string.action_start)
-        binding.trackButton.setIconResource(android.R.drawable.ic_media_play)
+        updateTrackButton()
+    }
+
+    private fun updateTrackButton() {
+        if (isTracking) {
+            binding.trackButton.setText(R.string.action_stop)
+            binding.trackButton.setIconResource(android.R.drawable.ic_media_pause)
+        } else {
+            binding.trackButton.setText(R.string.action_start)
+            binding.trackButton.setIconResource(android.R.drawable.ic_media_play)
+        }
     }
 
     private fun recenter() {
@@ -174,9 +265,19 @@ class MainActivity : AppCompatActivity() {
             ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun hasBackgroundLocationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
     override fun onResume() {
         super.onResume()
         map.onResume()
+        isTracking = settings.trackingActive
+        updateTrackButton()
         val filter = IntentFilter(LocationTrackingService.ACTION_POINT_ADDED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(pointAddedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)

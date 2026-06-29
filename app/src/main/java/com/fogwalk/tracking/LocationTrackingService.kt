@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import com.fogwalk.MainActivity
 import com.fogwalk.R
 import com.fogwalk.data.AppDatabase
+import com.fogwalk.data.Settings
 import com.fogwalk.data.VisitedRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,11 +39,13 @@ class LocationTrackingService : Service(), LocationListener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var repository: VisitedRepository
     private lateinit var locationManager: LocationManager
+    private lateinit var settings: Settings
 
     override fun onCreate() {
         super.onCreate()
         repository = VisitedRepository(AppDatabase.get(this).visitedPointDao())
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        settings = Settings(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -65,6 +68,8 @@ class LocationTrackingService : Service(), LocationListener {
             return
         }
 
+        settings.trackingActive = true
+
         try {
             for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
                 if (locationManager.isProviderEnabled(provider)) {
@@ -82,6 +87,7 @@ class LocationTrackingService : Service(), LocationListener {
     }
 
     private fun stopTracking() {
+        settings.trackingActive = false
         try {
             locationManager.removeUpdates(this)
         } catch (_: SecurityException) {
