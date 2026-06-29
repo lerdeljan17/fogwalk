@@ -101,7 +101,7 @@ class FogOverlay(private val mapView: MapView) : Overlay() {
     }
 
     companion object {
-        const val DEFAULT_REVEAL_RADIUS_METERS: Double = 45.0
+        const val DEFAULT_REVEAL_RADIUS_METERS: Double = 12.0
 
         /** Translucent deep-blue fog (~80% opaque). */
         private const val FOG_COLOR: Int = 0xCC0E2233.toInt()

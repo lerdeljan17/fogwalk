@@ -9,7 +9,7 @@
 A fog-of-war map for real life. FogWalk covers the map in a blue fog and permanently clears it everywhere you walk, so you can see at a glance how much of your city, town, or the wild you've actually explored.
 
 [![CI](https://github.com/lerdeljan17/fogwalk/actions/workflows/ci.yml/badge.svg)](https://github.com/lerdeljan17/fogwalk/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/lerdeljan17/fogwalk?label=latest%20build)](https://github.com/lerdeljan17/fogwalk/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/lerdeljan17/fogwalk?label=latest%20build&cacheSeconds=300)](https://github.com/lerdeljan17/fogwalk/releases/latest)
 
 ### [Download the latest APK](https://github.com/lerdeljan17/fogwalk/releases/latest)
 
@@ -37,7 +37,7 @@ The reveal effect lives in [`FogOverlay`](app/src/main/java/com/fogwalk/map/FogO
 
 ```mermaid
 flowchart LR
-  gps["GPS location"] --> dedupe["De-dupe (>15 m moved)"]
+  gps["GPS location"] --> dedupe["De-dupe (>5 m moved)"]
   dedupe --> db["Room database"]
   db --> overlay["FogOverlay"]
   overlay --> reveal["Clear fog around visited points"]
@@ -93,7 +93,7 @@ Defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). On every push
 
 The [latest release](https://github.com/lerdeljan17/fogwalk/releases/latest) link above always points at the newest build.
 
-> The release APK is signed with the standard Android debug key so it installs without any configured secrets. For a production release, add a real keystore via `signingConfigs` and GitHub Actions secrets.
+> CI signs the release APK with a stable keystore stored in GitHub Actions secrets, so every published release shares the same signature and increasing `versionCode` and updates in place. Local/contributor builds without those secrets fall back to the Android debug key automatically.
 
 ## Permissions
 

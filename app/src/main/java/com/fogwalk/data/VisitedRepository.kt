@@ -49,6 +49,6 @@ class VisitedRepository(
     }
 
     companion object {
-        const val DEFAULT_MIN_DISTANCE_METERS: Double = 15.0
+        const val DEFAULT_MIN_DISTANCE_METERS: Double = 5.0
     }
 }

@@ -191,8 +191,8 @@ class LocationTrackingService : Service(), LocationListener {
 
         private const val CHANNEL_ID = "fogwalk_tracking"
         private const val NOTIFICATION_ID = 1001
-        private const val MIN_TIME_MS = 2_000L
-        private const val MIN_DISTANCE_M = 5f
+        private const val MIN_TIME_MS = 1_000L
+        private const val MIN_DISTANCE_M = 3f
 
         fun start(context: Context) {
             val intent = Intent(context, LocationTrackingService::class.java).apply {
