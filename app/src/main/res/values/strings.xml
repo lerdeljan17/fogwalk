@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">FogWalk</string>
+
+    <string name="action_start">Start tracking</string>
+    <string name="action_stop">Stop tracking</string>
+    <string name="action_recenter">Recenter</string>
+
+    <string name="notification_channel_name">Location tracking</string>
+    <string name="notification_channel_description">Keeps recording your path while you walk.</string>
+    <string name="notification_title">FogWalk is tracking your path</string>
+    <string name="notification_text">Walk around to clear the fog. Tap to open.</string>
+
+    <string name="permission_rationale">FogWalk needs location access to reveal the map where you walk. Grant background location to keep tracking with the screen off.</string>
+    <string name="permission_denied">Location permission is required to clear the fog.</string>
+
+    <string name="stat_revealed">Revealed: %1$d spots</string>
+</resources>
