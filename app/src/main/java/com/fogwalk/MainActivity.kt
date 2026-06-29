@@ -24,6 +24,7 @@ import com.fogwalk.tracking.LocationTrackingService
 import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
@@ -122,6 +123,9 @@ class MainActivity : AppCompatActivity() {
         map = binding.map
         map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
+        // Hide osmdroid's built-in +/- zoom buttons so they don't overlap the
+        // bottom-right FABs; pinch-to-zoom and double-tap zoom remain.
+        map.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         map.controller.setZoom(DEFAULT_ZOOM)
         map.controller.setCenter(GeoPoint(DEFAULT_LAT, DEFAULT_LON))
 
