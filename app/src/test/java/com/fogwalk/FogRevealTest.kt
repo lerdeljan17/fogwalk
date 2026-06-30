@@ -49,4 +49,20 @@ class FogRevealTest {
     fun isRevealed_withZeroRadius_isNotRevealed() {
         assertFalse(GeoUtils.isRevealed(100.0, 100.0, centers, 0.0))
     }
+
+    @Test
+    fun isWithinConnectDistance_closePoints_areConnected() {
+        // ~11 m apart, well under a 40 m max gap -> bridge the segment.
+        assertTrue(
+            GeoUtils.isWithinConnectDistance(48.2082, 16.3738, 48.20830, 16.3738, 40.0),
+        )
+    }
+
+    @Test
+    fun isWithinConnectDistance_distantPoints_areNotConnected() {
+        // ~150 m apart, above a 40 m max gap -> treat as a gap.
+        assertFalse(
+            GeoUtils.isWithinConnectDistance(48.2082, 16.3738, 48.2095, 16.3738, 40.0),
+        )
+    }
 }

@@ -82,6 +82,22 @@ object GeoUtils {
         return haversineMeters(lastLat, lastLon, newLat, newLon) >= minDistanceMeters
     }
 
+    /**
+     * Decide whether two consecutive visited points are close enough to be
+     * bridged with a continuous trail segment. Points farther apart than
+     * [maxGapMeters] are considered a gap (GPS dropout, or the app reopened
+     * elsewhere) and should be left unconnected.
+     */
+    fun isWithinConnectDistance(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double,
+        maxGapMeters: Double,
+    ): Boolean {
+        return haversineMeters(lat1, lon1, lat2, lon2) <= maxGapMeters
+    }
+
     /** Euclidean distance between two screen pixels. */
     fun pixelDistance(x1: Double, y1: Double, x2: Double, y2: Double): Double {
         return hypot(x2 - x1, y2 - y1)
