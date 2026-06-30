@@ -26,6 +26,22 @@ val hasReleaseSigning = !fogwalkKeystore.isNullOrBlank() &&
     !fogwalkKeyAlias.isNullOrBlank() &&
     !fogwalkKeyPassword.isNullOrBlank()
 
+// Opt-in strict mode for trusted environments (CI release builds): when set,
+// we refuse to silently fall back to debug signing. Local/contributor builds
+// leave this unset and keep the convenient debug fallback.
+val requireKeystore = fogwalkConfig("FOGWALK_REQUIRE_KEYSTORE")
+    ?.lowercase() in setOf("true", "1")
+
+if (requireKeystore && !hasReleaseSigning) {
+    throw GradleException(
+        "FOGWALK_REQUIRE_KEYSTORE is set but no valid release keystore was " +
+            "provided; refusing to fall back to debug signing. Ensure " +
+            "FOGWALK_KEYSTORE points to an existing keystore file and that " +
+            "FOGWALK_KEYSTORE_PASSWORD, FOGWALK_KEY_ALIAS, and " +
+            "FOGWALK_KEY_PASSWORD are all set."
+    )
+}
+
 val fogwalkVersionCode = fogwalkConfig("FOGWALK_VERSION_CODE")?.toIntOrNull() ?: 1
 val fogwalkVersionName = fogwalkConfig("FOGWALK_VERSION_NAME") ?: "1.0"
 

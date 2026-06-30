@@ -36,6 +36,25 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Verify signing secrets are present
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$KEYSTORE_BASE64" ] && missing="$missing KEYSTORE_BASE64"
+          [ -z "$KEYSTORE_PASSWORD" ] && missing="$missing KEYSTORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ] && missing="$missing KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ] && missing="$missing KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "Missing required signing secret(s):$missing"
+            echo "Refusing to build a release that could fall back to debug signing."
+            exit 1
+          fi
+          echo "All required signing secrets are present."
+
       - name: Decode release keystore
         id: keystore
         env:
@@ -51,6 +70,7 @@ jobs:
 
       - name: Build release APK
         env:
+          FOGWALK_REQUIRE_KEYSTORE: 'true'
           FOGWALK_KEYSTORE: ${{ steps.keystore.outputs.keystore_path }}
           FOGWALK_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           FOGWALK_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
